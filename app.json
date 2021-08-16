@@ -1,0 +1,14 @@
+{
+    "name": "bypasscf",
+    "description": "bypasscf",
+    "repository": "https://github.com/wingeva1986/FlareSolverr/master",
+    "website": "https://docs.rsshub.app/",
+    "logo": "https://i.loli.net/2019/04/23/5cbeb7e41414c.png",
+    "keywords": ["RSS"],
+    "env": {
+        "PORT": {
+            "value": "8191",
+            "required": false
+        }
+    }
+}
