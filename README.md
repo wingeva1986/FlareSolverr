@@ -5,17 +5,17 @@
 [![GitHub issues](https://img.shields.io/github/issues/FlareSolverr/FlareSolverr)](https://github.com/FlareSolverr/FlareSolverr/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/FlareSolverr/FlareSolverr)](https://github.com/FlareSolverr/FlareSolverr/pulls)
 [![Donate PayPal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=X5NJLLX5GLTV6&source=url)
-[![Donate Buy Me A Coffee](https://img.shields.io/badge/Donate-Buy%20me%20a%20coffee-yellow.svg)](https://www.buymeacoffee.com/ngosang)
-[![Donate Bitcoin](https://img.shields.io/badge/Donate-Bitcoin-orange.svg)](https://en.cryptobadges.io/donate/13Hcv77AdnFWEUZ9qUpoPBttQsUT7q9TTh)
+[![Donate Bitcoin](https://en.cryptobadges.io/badge/micro/13Hcv77AdnFWEUZ9qUpoPBttQsUT7q9TTh)](https://en.cryptobadges.io/donate/13Hcv77AdnFWEUZ9qUpoPBttQsUT7q9TTh)
+[![Donate Ethereum](https://en.cryptobadges.io/badge/micro/0x0D1549BbB00926BF3D92c1A8A58695e982f1BE2E)](https://en.cryptobadges.io/donate/0x0D1549BbB00926BF3D92c1A8A58695e982f1BE2E)
 
-FlareSolverr is a proxy server to bypass Cloudflare protection.
+FlareSolverr is a proxy server to bypass Cloudflare and DDoS-GUARD protection.
 
 ## How it works
 
-FlareSolverr starts a proxy server and it waits for user requests in an idle state using few resources.
+FlareSolverr starts a proxy server, and it waits for user requests in an idle state using few resources.
 When some request arrives, it uses [puppeteer](https://github.com/puppeteer/puppeteer) with the
 [stealth plugin](https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-stealth)
-to create a headless browser (Chrome). It opens the URL with user parameters and waits until the Cloudflare challenge
+to create a headless browser (Firefox). It opens the URL with user parameters and waits until the Cloudflare challenge
 is solved (or timeout). The HTML code and the cookies are sent back to the user, and those cookies can be used to
 bypass Cloudflare using other HTTP clients.
 
@@ -56,22 +56,27 @@ docker run -d \
   ghcr.io/flaresolverr/flaresolverr:latest
 ```
 
+If your host OS is Debian, make sure `libseccomp2` version is 2.5.x. You can check the version with `sudo apt-cache policy libseccomp2` 
+and update the package with `sudo apt install libseccomp2=2.5.1-1~bpo10+1` or `sudo apt install libseccomp2=2.5.1-1+deb11u1`.
+Remember to restart the Docker daemon and the container after the update.
+
 ### Precompiled binaries
 
 This is the recommended way for Windows users.
 * Download the [FlareSolverr zip](https://github.com/FlareSolverr/FlareSolverr/releases) from the release's assets. It is available for Windows and Linux.
-* Extract the zip file. FlareSolverr executable and chrome folder must be in the same directory.
+* Extract the zip file. FlareSolverr executable and firefox folder must be in the same directory.
 * Execute FlareSolverr binary. In the environment variables section you can find how to change the configuration.
 
 ### From source code
 
 This is the recommended way for macOS users and for developers.
-* Install [NodeJS](https://nodejs.org/).
+* Install [NodeJS](https://nodejs.org/) 16.
 * Clone this repository and open a shell in that path.
+* Run `export PUPPETEER_PRODUCT=firefox` (Linux/macOS) or `set PUPPETEER_PRODUCT=firefox` (Windows).
 * Run `npm install` command to install FlareSolverr dependencies.
-* Run `node node_modules/puppeteer/install.js` to install Chromium.
-* Run `npm run build` command to compile TypeScript code.
-* Run `npm start` command to start FlareSolverr.
+* Run `npm start` command to compile TypeScript code and start FlareSolverr.
+
+If you get errors related to firefox not installed try running `node node_modules/puppeteer/install.js` to install Firefox.
 
 ### Systemd service
 
@@ -86,11 +91,7 @@ curl -L -X POST 'http://localhost:8191/v1' \
 --data-raw '{
   "cmd": "request.get",
   "url":"http://www.google.com/",
-  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW...",
-  "maxTimeout": 60000,
-  "headers": {
-    "X-Test": "Testing 123..."
-  }
+  "maxTimeout": 60000
 }'
 ```
 
@@ -107,7 +108,7 @@ This also speeds up the requests since it won't have to launch a new browser ins
 Parameter | Notes
 |--|--|
 session | Optional. The session ID that you want to be assigned to the instance. If isn't set a random UUID will be assigned.
-userAgent | Optional. Will be used by the headless browser.
+proxy | Optional, default disabled. Eg: `"proxy": {"url": "http://127.0.0.1:8888"}`. You must include the proxy schema in the URL: `http://`, `socks4://` or `socks5://`. Authorization (username/password) is not supported.
 
 #### + `sessions.list`
 
@@ -142,11 +143,12 @@ Parameter | Notes
 |--|--|
 url | Mandatory
 session | Optional. Will send the request from and existing browser instance. If one is not sent it will create a temporary instance that will be destroyed immediately after the request is completed.
-headers | Optional. To specify user headers.
 maxTimeout | Optional, default value 60000. Max timeout to solve the challenge in milliseconds.
 cookies | Optional. Will be used by the headless browser. Follow [this](https://github.com/puppeteer/puppeteer/blob/v3.3.0/docs/api.md#pagesetcookiecookies) format.
 returnOnlyCookies | Optional, default false. Only returns the cookies. Response data, headers and other parts of the response are removed.
-returnRawHtml | Optional, default false. The response data will be returned without JS processing. This is useful for JSON or plain text content.
+proxy | Optional, default disabled. Eg: `"proxy": {"url": "http://127.0.0.1:8888"}`. You must include the proxy schema in the URL: `http://`, `socks4://` or `socks5://`. Authorization (username/password) is not supported. (When the `session` parameter is set, the proxy is ignored; a session specific proxy can be set in `sessions.create`.)
+
+:warning: If you want to use Cloudflare clearance cookie in your scripts, make sure you use the FlareSolverr User-Agent too. If they don't match you will see the challenge.
 
 Example response from running the `curl` above:
 
@@ -213,16 +215,7 @@ This is the same as `request.get` but it takes one more param:
 
 Parameter | Notes
 |--|--|
-postData | Must be a string. If you want to POST a form, don't forget to set the `Content-Type` header to `application/x-www-form-urlencoded` or the server might not understand your request.
-
-### Download small files
-
-If you need to access an image/pdf or small file, you should pass the `download` parameter to `request.get` setting it
-to `true`. Rather than access the html and return text it will return the buffer **base64** encoded which you will be
-able to decode and save the image/pdf.
-
-This method isn't recommended for videos or anything larger. As that should be streamed back to the client and at the
-moment there is nothing setup to do so. If this is something you need feel free to create an issue and/or submit a PR.
+postData | Must be a string with `application/x-www-form-urlencoded`. Eg: `a=b&c=d`
 
 ## Environment variables
 
@@ -233,6 +226,8 @@ LOG_HTML | false | Only for debugging. If `true` all HTML that passes through th
 CAPTCHA_SOLVER | none | Captcha solving method. It is used when a captcha is encountered. See the Captcha Solvers section.
 TZ | UTC | Timezone used in the logs and the web browser. Example: `TZ=Europe/London`.
 HEADLESS | true | Only for debugging. To run the web browser in headless mode or visible.
+BROWSER_TIMEOUT | 40000 | If you are experiencing errors/timeouts because your system is slow, you can try to increase this value. Remember to increase the `maxTimeout` parameter too.
+TEST_URL | https://www.google.com | FlareSolverr makes a request on start to make sure the web browser is working. You can change that URL if it is blocked in your country.
 PORT | 8191 | Listening port. You don't need to change this if you are running on Docker.
 HOST | 0.0.0.0 | Listening interface. You don't need to change this if you are running on Docker.
 
@@ -251,37 +246,6 @@ If this is the case, FlareSolverr will return the error `Captcha detected but no
 
 FlareSolverr can be customized to solve the captchas automatically by setting the environment variable `CAPTCHA_SOLVER`
 to the file name of one of the adapters inside the [/captcha](src/captcha) directory.
-
-### hcaptcha-solver
-
-This method makes use of the [hcaptcha-solver](https://github.com/JimmyLaurent/hcaptcha-solver) project.
-
-NOTE: This solver works picking random images so it will fail in a lot of requests and it's hard to know if it is
-working or not. In a real use case with Sonarr/Radarr + Jackett it is still useful because those apps make a new request
-each 15 minutes. Eventually one of the requests is going to work and Jackett saves the cookie forever (until it stops
-working).
-
-To use this solver you must set the environment variable:
-
-```bash
-CAPTCHA_SOLVER=hcaptcha-solver
-```
-
-### CaptchaHarvester
-
-This method makes use of the [CaptchaHarvester](https://github.com/NoahCardoza/CaptchaHarvester) project which allows
-users to collect their own tokens from ReCaptcha V2/V3 and hCaptcha for free.
-
-To use this method you must set these environment variables:
-
-```bash
-CAPTCHA_SOLVER=harvester
-HARVESTER_ENDPOINT=https://127.0.0.1:5000/token
-```
-
-**Note**: above I set `HARVESTER_ENDPOINT` to the default configuration of the captcha harvester's server, but that
-could change if you customize the command line flags. Simply put, `HARVESTER_ENDPOINT` should be set to the URI of the
-route that returns a token in plain text when called.
 
 ## Related projects
 
